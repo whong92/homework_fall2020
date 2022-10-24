@@ -80,20 +80,35 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         else:
             observation = obs[None]
 
-        # TODO return the action that the policy prescribes
-        raise NotImplementedError
+        if self.discrete:
+            logits = self.logits_na(ptu.from_numpy(observation))
+            action = torch.distributions.Multinomial(1, logits=logits).sample()
+        else:
+            mu = self.mean_net(ptu.from_numpy(observation))
+            logsigma = self.logstd.unsqueeze(0).repeat(observation.shape[0], 1)
+            action = torch.distributions.Normal(loc=mu, scale=torch.exp(logsigma)).sample()
+        return ptu.to_numpy(action)
 
     # update/train this policy
     def update(self, observations, actions, **kwargs):
-        raise NotImplementedError
+        action_dist: torch.distributions.Distribution = self(ptu.from_numpy(observations))
+        actions = ptu.from_numpy(actions)
+        nll_actions = -action_dist.log_prob(actions).mean()
+        return nll_actions
 
     # This function defines the forward pass of the network.
     # You can return anything you want, but you should be able to differentiate
     # through it. For example, you can return a torch.FloatTensor. You can also
     # return more flexible objects, such as a
     # `torch.distributions.Distribution` object. It's up to you!
-    def forward(self, observation: torch.FloatTensor) -> Any:
-        raise NotImplementedError
+    def forward(self, observation: torch.FloatTensor) -> torch.distributions.Distribution:
+        if self.discrete:
+            logits = self.logits_na(observation)
+            return torch.distributions.Multinomial(1, logits=logits)
+        else:
+            mu = self.mean_net(observation)
+            logsigma = self.logstd.unsqueeze(0).repeat(observation.shape[0], 1)
+            return torch.distributions.Normal(loc=mu, scale=torch.exp(logsigma))
 
 
 #####################################################
@@ -109,7 +124,10 @@ class MLPPolicySL(MLPPolicy):
             adv_n=None, acs_labels_na=None, qvals=None
     ):
         # TODO: update the policy and return the loss
-        loss = TODO
+        self.optimizer.zero_grad()
+        loss = super().update(observations, actions)
+        loss.backward()
+        self.optimizer.step()
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),
