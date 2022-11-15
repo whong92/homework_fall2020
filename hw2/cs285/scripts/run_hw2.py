@@ -1,4 +1,8 @@
+import sys
 import os
+
+sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(__file__)))))
+
 import time
 
 from cs285.infrastructure.rl_trainer import RL_Trainer
@@ -23,6 +27,7 @@ class PG_Trainer(object):
             'standardize_advantages': not(params['dont_standardize_advantages']),
             'reward_to_go': params['reward_to_go'],
             'nn_baseline': params['nn_baseline'],
+            'gae_lambda': params['gae_lambda']
         }
 
         train_args = {
@@ -67,6 +72,7 @@ def main():
 
     parser.add_argument('--num_agent_train_steps_per_iter', type=int, default=1)
     parser.add_argument('--discount', type=float, default=1.0)
+    parser.add_argument('--gae_lambda', type=float, default=None)
     parser.add_argument('--learning_rate', '-lr', type=float, default=5e-3)
     parser.add_argument('--n_layers', '-l', type=int, default=2)
     parser.add_argument('--size', '-s', type=int, default=64)
