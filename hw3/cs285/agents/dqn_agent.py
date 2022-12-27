@@ -57,7 +57,7 @@ class DQNAgent(object):
             # HINT: take random action
                 # with probability eps (see np.random.random())
                 # OR if your current step number (see self.t) is less that self.learning_starts
-            action = torch.randint(self.num_actions, size=(1, ))
+            action = torch.randint(self.num_actions, size=(1, )).numpy()[0]
         else:
             # HINT: Your actor will take in multiple previous observations ("frames") in order
                 # to deal with the partial observability of the environment. Get the most recent

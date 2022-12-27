@@ -22,7 +22,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                  discrete=False,
                  learning_rate=1e-4,
                  training=True,
-                 nn_baseline=False,
                  **kwargs
                  ):
         super().__init__(**kwargs)
@@ -35,7 +34,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         self.size = size
         self.learning_rate = learning_rate
         self.training = training
-        self.nn_baseline = nn_baseline
 
         if self.discrete:
             self.logits_na = ptu.build_mlp(input_size=self.ob_dim,
@@ -61,21 +59,6 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
                 itertools.chain([self.logstd], self.mean_net.parameters()),
                 self.learning_rate
             )
-
-        if nn_baseline:
-            self.baseline = ptu.build_mlp(
-                input_size=self.ob_dim,
-                output_size=1,
-                n_layers=self.n_layers,
-                size=self.size,
-            )
-            self.baseline.to(ptu.device)
-            self.baseline_optimizer = optim.Adam(
-                self.baseline.parameters(),
-                self.learning_rate,
-            )
-        else:
-            self.baseline = None
 
     ##################################
 
@@ -127,5 +110,17 @@ class MLPPolicy(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
 class MLPPolicyAC(MLPPolicy):
     def update(self, observations, actions, adv_n=None):
         # TODO: update the policy and return the loss
-        loss = TODO
+        observations = ptu.from_numpy(observations)
+        actions = ptu.from_numpy(actions)
+        adv_n = ptu.from_numpy(adv_n)
+
+        loss: torch.Tensor = (
+            - self.forward(observations).log_prob(actions) *
+            torch.as_tensor(adv_n)
+        ).mean()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
         return loss.item()
