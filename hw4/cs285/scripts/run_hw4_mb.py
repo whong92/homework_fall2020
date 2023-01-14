@@ -1,4 +1,8 @@
+import sys
 import os
+
+sys.path.append(os.path.dirname((os.path.dirname(os.path.dirname(__file__)))))
+
 import time
 
 from cs285.infrastructure.rl_trainer import RL_Trainer
